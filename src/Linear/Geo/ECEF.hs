@@ -1,3 +1,15 @@
+{-|
+Module      : Linear.Geo.ECEF
+Copyright   : Travis Whitaker 2023
+License     : MIT
+Maintainer  : pi.boy.travis@gmail.com
+Stability   : Provisional
+Portability : Portable (Windows, POSIX)
+
+Earth-centered Earth-fixed (ECEF) coordinates.
+
+-}
+
 {-# LANGUAGE DataKinds
            , DeriveDataTypeable
            , DeriveGeneric
@@ -39,7 +51,7 @@ import qualified Linear.Vector  as L
 -- | R3 vector with the origin at the Earth's center of mass, first basis vector
 --   through the intersection of the prime meridian and the equator, and the
 --   third basis vector through True North. The origin and basis vectors move
---   with the Earth through space.
+--   and rotate with the Earth through space.
 newtype ECEF a = ECEF (L.V3 a)
              deriving stock ( Eq
                             , Ord

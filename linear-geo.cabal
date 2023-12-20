@@ -2,7 +2,15 @@ cabal-version:      2.4
 name:               linear-geo
 version:            0.1.0.0
 synopsis:           Geographic coordinates, built on the linear package.
-description:        Geographic coordinates, built on the linear package.
+description:
+    Geographic coordinates, built on the linear package.
+    .
+    This package provides types and functions for dealing with coordinates in
+    geodetic, ECEF, and ENU coordinate systems. A particular emphasis is placed
+    on numerical stability, especially for complex conversions like converting
+    between geodetic and ECEF coordinates. However, not every part of every
+    function has machine checked for numerical stability.
+
 
 homepage:           https://github.com/TravisWhitaker/linear-geo
 bug-reports:        https://github.com/TravisWhitaker/linear-geo
@@ -11,51 +19,53 @@ license-file:       LICENSE
 author:             Travis Whitaker
 maintainer:         pi.boy.travis@gmail.com
 
-copyright:          Travis Whitaker 2021
+copyright:          Travis Whitaker 2023
 category:           Math
 extra-source-files:
     CHANGELOG.md
     README.md
 
+common common
+    default-language: Haskell2010
+    ghc-options: -O2
+                 -Weverything
+                 -Wcompat
+                 -Werror
+                 -Wno-unsafe
+                 -Wno-type-defaults
+                 -Wno-missing-safe-haskell-mode
+                 -Wno-implicit-prelude
+                 -Wno-missing-import-lists
+                 -Wno-prepositive-qualified-module
+                 -Wno-missing-kind-signatures
+                 -Wno-monomorphism-restriction
+
 library
+    import:           common
     exposed-modules:  Linear.Geo
                       Linear.Geo.ECEF
                       Linear.Geo.ENU
                       Linear.Geo.Geodetic
                       Linear.Geo.PlaneAngle
     --other-modules:
-    build-depends:    base ^>=4.14.1.0
-                    , adjunctions
+    build-depends:    base >=4.14 && <5
                     , deepseq
                     , distributive
-                    , lens
                     , linear
                     , vector
     hs-source-dirs:   src
-    default-language: Haskell2010
-    ghc-options:      -O2
-                      -Wall
-                      -Widentities
-                      -Wredundant-constraints
-                      -Wcompat
-                      -Wno-type-defaults
-                      -Werror
 
 test-suite props
-    default-language: Haskell2010
+    import:           common
     type:             exitcode-stdio-1.0
     hs-source-dirs:   test
     main-is:          Main.hs
-    build-depends:    base ^>=4.14.1.0
+    build-depends:    base >=4.14 && <5
                     , hedgehog
                     , linear
                     , linear-geo
-    ghc-options:      -O2
-                      -Wall
-                      -Widentities
-                      -Wredundant-constraints
-                      -Wcompat
-                      -Wno-type-defaults
-                      -Werror
-                      -threaded
-                      -with-rtsopts=-N
+                    , reflection
+    ghc-options:      -threaded
+                      -rtsopts
+                      "-with-rtsopts=-N"
+                      -Wno-all-missed-specialisations

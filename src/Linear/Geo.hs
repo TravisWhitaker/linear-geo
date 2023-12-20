@@ -1,3 +1,14 @@
+{-|
+Copyright   : Travis Whitaker 2023
+License     : MIT
+Maintainer  : pi.boy.travis@gmail.com
+Stability   : Provisional
+Portability : Portable (Windows, POSIX)
+
+Various Earth-centric coordinate systems with utilities.
+
+-}
+
 module Linear.Geo (
     module Linear.Geo.ECEF
   , module Linear.Geo.ENU

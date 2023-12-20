@@ -1,11 +1,36 @@
+{-|
+Module      : Linear.Geo.Geodetic
+Copyright   : Travis Whitaker 2023
+License     : MIT
+Maintainer  : pi.boy.travis@gmail.com
+Stability   : Provisional
+Portability : Portable (Windows, POSIX)
+
+Geodetic coordinates. The ellipsoid is not indexed explicitly, but conversion functions
+for WGS84 are provided.
+
+-}
+
 {-# LANGUAGE BangPatterns
            , DeriveAnyClass
            , DeriveDataTypeable
            , DeriveFunctor
            , DeriveGeneric
+           , DerivingStrategies
            #-}
 
-module Linear.Geo.Geodetic where
+module Linear.Geo.Geodetic (
+    Geo(..)
+  , normalizeGeo
+  , fromLatLonAlt
+  , toLatLonAlt
+  , simpleEllipsoid
+  , earthEllipsoid
+  , ecefToGeoFerrariEllipsoid
+  , ecefToGeoFerrariEarth
+  , geoToECEF
+  , ecefToGeo
+  ) where
 
 import Control.Applicative
 
@@ -29,21 +54,21 @@ import Linear.Geo.PlaneAngle
 --   formed by the intersection of the parallel and the prime meridian and the
 --   specified point on the parallel, and 'geoAlt' is the magnitude of the
 --   position vector minus the magnitude of the unique vector colinear and
---   coordinal with the position vector impingent on the ellipsoid's surface.
---   Angles are in radians.
+--   coordinal with the position vector impingent on the ellipsoid's surface
+--   (i.e. height above ellipsoid). Angles are in radians.
 data Geo a = Geo {
     geoLat :: !(Radians a)
   , geoLon :: !(Radians a)
   , geoAlt :: !a
-  } deriving ( Eq
-             , Ord
-             , Show
-             , Generic
-             , Data
-             , Bounded
-             , Functor
-             , NFData
-             )
+  } deriving stock ( Eq
+                   , Ord
+                   , Show
+                   , Generic
+                   , Data
+                   , Bounded
+                   , Functor
+                   )
+    deriving anyclass (NFData)
 
 instance Applicative Geo where
     pure x = Geo (pure x) (pure x) x
@@ -71,6 +96,11 @@ instance Foldable Geo where
 instance Traversable Geo where
     traverse f (Geo p l h) = Geo <$> traverse f p <*> traverse f l <*> f h
 
+-- | Normalize the two angle components of a `Geo`.
+normalizeGeo :: (Floating a, Real a) => Geo a -> Geo a
+normalizeGeo (Geo p l a) = Geo (normalizeAngle p) (normalizeAngle l) a
+
+-- | Convert a pair of angles and a height above the ellipsoid into a 'Geo'.
 fromLatLonAlt :: (PlaneAngle lat, PlaneAngle lon, Floating a, Real a)
               => lat a -- ^ Latitude
               -> lon a -- ^ Longitude
@@ -78,6 +108,7 @@ fromLatLonAlt :: (PlaneAngle lat, PlaneAngle lon, Floating a, Real a)
               -> Geo a
 fromLatLonAlt lat lon alt = Geo (toRadians lat) (toRadians lon) alt
 
+-- | Unpack a 'Geo' into latitude, longitude, and height above the ellipsoid.
 toLatLonAlt :: (PlaneAngle lat, PlaneAngle lon, Floating a, Real a)
             => Geo a
             -> (lat a, lon a, a)
@@ -147,6 +178,7 @@ ecefToGeoFerrariEllipsoid a b (ECEF (L.V3 x y z)) =
         l     = atan2 y x
     in Geo (Radians p) (Radians l) h
 
+-- | Standard WGS84 ellipsoid.
 ecefToGeoFerrariEarth :: RealFloat a => ECEF a -> Geo a
 ecefToGeoFerrariEarth = ecefToGeoFerrariEllipsoid 6378137 6356752.314245
 

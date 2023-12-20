@@ -1,7 +1,21 @@
+{-|
+Module      : Linear.Geo.ENU
+Copyright   : Travis Whitaker 2023
+License     : MIT
+Maintainer  : pi.boy.travis@gmail.com
+Stability   : Provisional
+Portability : Portable (Windows, POSIX)
+
+East-North-Up coordinates.
+
+-}
+
 {-# LANGUAGE DataKinds
            , DeriveAnyClass
            , DeriveDataTypeable
            , DeriveGeneric
+           , DerivingStrategies
+           , MagicHash
            , ScopedTypeVariables
            , TypeFamilies
            #-}
@@ -11,7 +25,9 @@ module Linear.Geo.ENU (
   , alignOrigin
   , liftAO2
   , liftAO2V
+  , rotNormToECEF
   , enuToECEF
+  , rotECEFToNorm
   , ecefToENU
   , disp
   , diff
@@ -29,6 +45,8 @@ import Control.DeepSeq (NFData)
 import Data.Data (Data)
 
 import GHC.Generics (Generic)
+
+import GHC.Exts
 
 import qualified Linear.Affine  as L
 import qualified Linear.Epsilon as L
@@ -61,14 +79,14 @@ import Linear.Geo.PlaneAngle
 data ENU a = ENU {
     enuOrigin :: ECEF a
   , enuPoint  :: L.V3 a
-  } deriving ( Eq
-             , Ord
-             , Show
-             , Generic
-             , Data
-             , Bounded
-             , NFData
-             )
+  } deriving stock ( Eq
+                   , Ord
+                   , Show
+                   , Generic
+                   , Data
+                   , Bounded
+                   )
+    deriving anyclass (NFData)
 
 instance L.R1 ENU where
     _x f (ENU o (L.V3 x y z)) = (\x' -> ENU o (L.V3 x' y z)) <$> f x
@@ -85,6 +103,7 @@ instance L.R3 ENU where
 -- | Align the second argument with the coordinate system of the first.
 alignOrigin :: RealFloat a => ENU a -> ENU a -> ENU a
 alignOrigin (ENU xo _) y@(ENU yo _)
+    | isTrue# (reallyUnsafePtrEquality# xo yo) = y
     | xo == yo  = y
     | otherwise = ecefToENU xo (enuToECEF y)
 
@@ -103,25 +122,44 @@ liftAO2V :: RealFloat a
 liftAO2V f x@(ENU xo xp) y = let (ENU _ y'p) = alignOrigin x y
                              in ENU xo (f xp y'p)
 
+-- | Rotation matrix that rotates the ENU coordinate frame at the provided
+--   latitude and longitude to the ECEF coordinate frame.
+rotNormToECEF :: Floating a
+              => Radians a -- ^ lat
+              -> Radians a -- ^ lon
+              -> L.M33 a
+rotNormToECEF (Radians po) (Radians lo) =
+    L.V3 (L.V3 (-(sin lo)) ((-(cos lo)) * (sin po))  ((cos lo) * (cos po)))
+         (L.V3 (cos lo)    ((- (sin lo)) * (sin po)) ((sin lo) * (cos po)))
+         (L.V3 0           (cos po)                  (sin po)             )
+
+-- | Convert an 'ENU' to an 'ECEF' by adding the rotated position vector to the
+--   origin.
 enuToECEF :: RealFloat a => ENU a -> ECEF a
 enuToECEF (ENU o x) =
-    let (Geo (Radians po) (Radians lo) _) = ecefToGeo o
-        rot           =
-            L.V3 (L.V3 (-(sin lo)) ((-(cos lo)) * (sin po))  ((cos lo) * (cos po)))
-                 (L.V3 (cos lo)    ((- (sin lo)) * (sin po)) ((sin lo) * (cos po)))
-                 (L.V3 0           (cos po)                  (sin po)             )
+    let (Geo po lo _) = ecefToGeo o
+        rot = rotNormToECEF po lo
     in o L..+^ (rot L.!* x)
 
+-- | Rotation matrix that rotates the ECEF coordinate frame to the ENU
+--   coordinate frame at the provided latitude and longitude.
+rotECEFToNorm :: Floating a
+              => Radians a -- ^ lat
+              -> Radians a -- ^ lon
+              -> L.M33 a
+rotECEFToNorm (Radians po) (Radians lo) =
+    L.V3 (L.V3 (-(sin lo))              (cos lo)                 0       )
+         (L.V3 ((-(cos lo)) * (sin po)) ((-(sin lo)) * (sin po)) (cos po))
+         (L.V3 ((cos lo) * (cos po))    ((sin lo) * (cos po))    (sin po))
+
+-- | Pack an 'ECEF' origin and point into an 'ENU'. 
 ecefToENU :: RealFloat a
           => ECEF a -- ^ Origin
           -> ECEF a -- ^ Point
           -> ENU a
 ecefToENU o@(ECEF vo) (ECEF vp) =
-    let (Geo (Radians po) (Radians lo) _) = ecefToGeo o
-        rot           =
-            L.V3 (L.V3 (-(sin lo))              (cos lo)                 0       )
-                 (L.V3 ((-(cos lo)) * (sin po)) ((-(sin lo)) * (sin po)) (cos po))
-                 (L.V3 ((cos lo) * (cos po))    ((sin lo) * (cos po))    (sin po))
+    let (Geo po lo _) = ecefToGeo o
+        rot = rotECEFToNorm po lo
         x = rot L.!* (vp - vo)
     in ENU o x
 
@@ -137,20 +175,26 @@ diff x y = enuPoint $ liftAO2V (L..-.) x y
 lerp :: RealFloat a => a -> ENU a -> ENU a -> ENU a
 lerp f = liftAO2V (L.lerp f)
 
+-- | Lifted dot.
 dot :: RealFloat a => ENU a -> ENU a -> a
 dot = liftAO2 L.dot
 
+-- | Lifted quadrance.
 quadrance :: Num a => ENU a -> a
 quadrance = L.quadrance . enuPoint
 
+-- | Lifted norm.
 norm :: Floating a => ENU a -> a
 norm = L.norm . enuPoint
 
+-- | Lifted distance.
 distance :: RealFloat a => ENU a -> ENU a -> a
 distance = liftAO2 L.distance
 
+-- | Lifted normalize.
 normalize :: (Floating a, L.Epsilon a) => ENU a -> ENU a
 normalize (ENU xo xp) = ENU xo (L.normalize xp)
 
+-- | Lifted project.
 project :: RealFloat a => ENU a -> ENU a -> ENU a
 project = liftAO2V L.project
