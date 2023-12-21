@@ -26,8 +26,10 @@ module Linear.Geo.ENU (
   , liftAO2
   , liftAO2V
   , rotNormToECEF
+  , rotNormToECEFFromENU
   , enuToECEF
   , rotECEFToNorm
+  , rotECEFToNormFromENU
   , ecefToENU
   , disp
   , diff
@@ -133,12 +135,17 @@ rotNormToECEF (Radians po) (Radians lo) =
          (L.V3 (cos lo)    ((- (sin lo)) * (sin po)) ((sin lo) * (cos po)))
          (L.V3 0           (cos po)                  (sin po)             )
 
+-- | Do 'rotNormToECEF', but get the lat and lon from some 'ENU's origin.
+rotNormToECEFFromENU :: RealFloat a => ENU a -> L.M33 a
+rotNormToECEFFromENU (ENU o _) =
+    let (Geo po lo _) = ecefToGeo o
+    in rotNormToECEF po lo
+
 -- | Convert an 'ENU' to an 'ECEF' by adding the rotated position vector to the
 --   origin.
 enuToECEF :: RealFloat a => ENU a -> ECEF a
-enuToECEF (ENU o x) =
-    let (Geo po lo _) = ecefToGeo o
-        rot = rotNormToECEF po lo
+enuToECEF enu@(ENU o x) =
+    let rot = rotNormToECEFFromENU enu
     in o L..+^ (rot L.!* x)
 
 -- | Rotation matrix that rotates the ECEF coordinate frame to the ENU
@@ -151,6 +158,12 @@ rotECEFToNorm (Radians po) (Radians lo) =
     L.V3 (L.V3 (-(sin lo))              (cos lo)                 0       )
          (L.V3 ((-(cos lo)) * (sin po)) ((-(sin lo)) * (sin po)) (cos po))
          (L.V3 ((cos lo) * (cos po))    ((sin lo) * (cos po))    (sin po))
+
+-- | Do 'rotECEFToNorm', but get the lat and lon from some 'ENU's origin.
+rotECEFToNormFromENU :: RealFloat a => ENU a -> L.M33 a
+rotECEFToNormFromENU (ENU o _) =
+    let (Geo po lo _) = ecefToGeo o
+    in rotECEFToNorm po lo
 
 -- | Pack an 'ECEF' origin and point into an 'ENU'. 
 ecefToENU :: RealFloat a
