@@ -30,7 +30,7 @@ common common
     ghc-options: -O2
                  -Weverything
                  -Wcompat
-                 -- -Werror
+                 -Werror
                  -Wno-unsafe
                  -Wno-type-defaults
                  -Wno-missing-safe-haskell-mode
