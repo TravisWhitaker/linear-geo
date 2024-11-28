@@ -39,6 +39,9 @@ common common
                  -Wno-prepositive-qualified-module
                  -Wno-missing-kind-signatures
                  -Wno-monomorphism-restriction
+                 -Wno-missing-role-annotations
+                 -Wno-missed-specialisations
+                 -Wno-all-missed-specialisations
 
 library
     import:           common

@@ -27,7 +27,7 @@ jobs:
                     mkdir -p /etc/nix
                     echo "build-cores = 2" >> /etc/nix/nix.conf
             - run:
-                name: Build cpuinfo
+                name: Build linear-geo
                 command: nix-shell --pure --run "cabal new-update && cabal new-build -j$(nproc)"
 
 workflow:
