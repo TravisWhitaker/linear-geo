@@ -31,8 +31,6 @@ module Linear.Geo.PlaneAngle (
   , degreesToDM
   ) where
 
-import Control.Applicative
-
 import Control.DeepSeq (NFData)
 
 import Control.Monad.Fix

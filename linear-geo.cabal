@@ -30,7 +30,7 @@ common common
     ghc-options: -O2
                  -Weverything
                  -Wcompat
-                 -- -Werror
+                 -Werror
                  -Wno-unsafe
                  -Wno-type-defaults
                  -Wno-missing-safe-haskell-mode
@@ -39,6 +39,9 @@ common common
                  -Wno-prepositive-qualified-module
                  -Wno-missing-kind-signatures
                  -Wno-monomorphism-restriction
+                 -Wno-missing-role-annotations
+                 -Wno-missed-specialisations
+                 -Wno-all-missed-specialisations
 
 library
     import:           common
