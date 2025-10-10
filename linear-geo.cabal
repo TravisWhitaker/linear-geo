@@ -30,7 +30,7 @@ common common
     ghc-options: -O2
                  -Weverything
                  -Wcompat
-                 -Werror
+                 -- -Werror
                  -Wno-unsafe
                  -Wno-type-defaults
                  -Wno-missing-safe-haskell-mode
@@ -42,19 +42,23 @@ common common
                  -Wno-missing-role-annotations
                  -Wno-missed-specialisations
                  -Wno-all-missed-specialisations
+                 -Wno-error=missing-local-signatures
 
 library
     import:           common
     exposed-modules:  Linear.Geo
                       Linear.Geo.ECEF
+                      -- Linear.Geo.ECI.TEME
                       Linear.Geo.ENU
                       Linear.Geo.Geodetic
                       Linear.Geo.PlaneAngle
+                      Linear.Geo.Time
     --other-modules:
     build-depends:    base >=4.14 && <5
                     , deepseq >= 1.4 && < 2
                     , distributive >= 0.6 && < 1
                     , linear >= 1.20 && < 2
+                    , time >= 1.0 && < 2
                     , vector >= 0.13 && < 1
     hs-source-dirs:   src
 

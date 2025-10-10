@@ -284,3 +284,75 @@ instance PlaneAngle DM where
     {-# INLINEABLE normalizeAngle #-}
     {-# INLINEABLE toRadians #-}
     {-# INLINEABLE fromRadians #-}
+
+{-
+
+-- | An angle represented as hours, minutes, and seconds of arc. Typically used
+--   to represent sidereal times or angles in celestial coordinate systems.
+data HMS a = HMS {
+    hmsHour :: !a
+  , hmsMin :: !a
+  , hmsSec :: !a
+  } deriving stock ( Eq
+                   , Ord
+                   , Show
+                   , Generic
+                   , Data
+                   , Bounded
+                   , Functor
+                   )
+   deriving anyclass (NFData)
+
+instance Applicative HMS where
+    pure x = HMS x x x
+    (HMS hf mf sf) <*> (HMS h m s) = HMS (hf d) (mf m) (sf s)
+
+instance Monad DMS where
+    return = pure
+    (HMS h m s) >>= f = let HMS h' _ _ = f h
+                            HMS _ m' _ = f m
+                            HMS _ _ s' = f s
+                        in HMS h' m' s'
+
+instance MonadZip HMS where
+    mzipWith = liftA2
+
+instance MonadFix HMS where
+    mfix f = HMS (let HMS h _ _ = f h in h)
+                 (let HMS _ m _ = f m in m)
+                 (let HMS _ _ s = f s in s)
+
+instance Foldable HMS where
+    foldMap f (HMS h m s) = f h <> f m <> f s
+
+instance Traversable HMS where
+    traverse f (HMS h m s) = HMS <$> f h <*> f m <*> f s
+
+instance Distributive HMS where
+    distribute f = HMS (fmap (\(HMS h _ _) -> h) f)
+                       (fmap (\(HMS _ m _) -> m) f)
+                       (fmap (\(HMS _ _ s) -> s) f)
+
+-- | Convert HMS to Degrees. This does not normalize the angle.
+hmsToDegrees :: Fractional a => HMS a -> Degrees a
+hmsToDegrees (HMS h m s) = Degrees ((h * (360 / 24)) + (m * (1 / 60)) + (s * (1 / 3600)))
+{-# INLINEABLE dmsToDegrees #-}
+
+-- | Convert degrees to DMS. This does not normalize the angle.
+degreesToHMS :: (Real a, Fractional a) => Degrees a -> HMS a
+degreesToHMS (Degrees d) =
+    let (dint, dleft) = divMod' d 1
+        (mint, mleft) = divMod' dleft (1 / 60)
+        sleft         = mleft / (1 / 3600)
+    in DMS (fromIntegral dint) (fromIntegral mint) sleft
+{-# INLINEABLE degreesToDMS #-}
+
+instance PlaneAngle DMS where
+    normalizeAngle = degreesToDMS . normalizeAngle . dmsToDegrees
+    toRadians      = toRadians . dmsToDegrees
+    fromRadians    = degreesToDMS . fromRadians
+    {-# INLINEABLE normalizeAngle #-}
+    {-# INLINEABLE toRadians #-}
+    {-# INLINEABLE fromRadians #-}
+
+-}
