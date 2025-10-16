@@ -44,19 +44,18 @@ import Linear.Geo.PlaneAngle
 posixDayLength :: Num a => a
 posixDayLength = 86400
 
--- bullshit
-ut1MinusUTC :: Fractional a => a
-ut1MinusUTC = 0.091570
+-- | UT1 - UTC = DUT in seconds
+type DUT = DiffTime
 
 -- | Unclear if this works if a leap second occurs at this exact time.
-utcToUT1 :: UTCTime -> UniversalTime
-utcToUT1 (UTCTime (ModifiedJulianDay mjDays) tod) =
+utcToUT1 :: DUT -> UTCTime -> UniversalTime
+utcToUT1 ut1MinusUTC (UTCTime (ModifiedJulianDay mjDays) tod) =
     ModJulianDate (fromIntegral mjDays + toRational (tod + ut1MinusUTC) / posixDayLength)
 
 
 -- | Unclear if this works if a leap second occurs at this exact time.
-ut1ToUTC :: UniversalTime -> UTCTime
-ut1ToUTC (ModJulianDate mjd) =
+ut1ToUTC :: DUT -> UniversalTime -> UTCTime
+ut1ToUTC ut1MinusUTC (ModJulianDate mjd) =
     let mjDays = floor mjd
         todFrac = fromRational (mjd - toRational mjDays)
     in UTCTime (ModifiedJulianDay mjDays) ((todFrac * 86400) - ut1MinusUTC)
@@ -74,20 +73,9 @@ julianDateFromUniversalTime (ModJulianDate mjd) = JulianDate (mjd + modJulDateEp
 universalTimeFromJulianDate :: JulianDate -> UniversalTime
 universalTimeFromJulianDate (JulianDate jd) = ModJulianDate (jd - modJulDateEpoch)
 
---bullshit
-taiMinusUTC :: Num a => a
-taiMinusUTC = 37
-
--- Only valid for current and future dates.
-dumbLSM :: LeapSecondMap
-dumbLSM _ = pure taiMinusUTC
-
-dumbUTCToTAI :: UTCTime -> AbsoluteTime
-dumbUTCToTAI = fromJust . utcToTAITime dumbLSM
-
 -- | Terrestrial time, used to be called "terrestrial dynamical time," successor
 --   of ephemeris time (ET).
-newtype TT = TT DiffTime
+newtype TT = TT { ttSeconds :: DiffTime }
 
 ttToTAI :: Fractional a => a
 ttToTAI = 32.184
@@ -117,17 +105,17 @@ gmstFromJulianDate (JulianDate jdut1) = let
     temp' = mod' (fromRational temp * deg2rad / 240) (2 * pi)
     in GMST $ normalizeAngle $ Radians temp'
 
-getCurrentUT1 :: IO UniversalTime
-getCurrentUT1 = utcToUT1 <$> getCurrentTime
+getCurrentUT1 :: DUT -> IO UniversalTime
+getCurrentUT1 dut = utcToUT1 dut <$> getCurrentTime
 
-getCurrentJulianDate :: IO JulianDate
-getCurrentJulianDate = julianDateFromUniversalTime <$> getCurrentUT1
+getCurrentJulianDate :: DUT -> IO JulianDate
+getCurrentJulianDate dut = julianDateFromUniversalTime <$> getCurrentUT1 dut
 
-getCurrentGMST :: IO (GMST Double)
-getCurrentGMST = gmstFromJulianDate <$> getCurrentJulianDate
+getCurrentGMST :: DUT -> IO (GMST Double)
+getCurrentGMST dut = gmstFromJulianDate <$> getCurrentJulianDate dut
 
-getCurrentTAI :: IO AbsoluteTime
-getCurrentTAI = dumbUTCToTAI <$> getCurrentTime
+getCurrentTAI :: LeapSecondMap -> IO (Maybe AbsoluteTime)
+getCurrentTAI lsm = utcToTAITime lsm <$> getCurrentTime
 
-getCurrentTT :: IO TT
-getCurrentTT = ttFromTAI <$> getCurrentTAI
+getCurrentTT :: LeapSecondMap -> IO (Maybe TT)
+getCurrentTT lsm = fmap ttFromTAI <$> getCurrentTAI lsm

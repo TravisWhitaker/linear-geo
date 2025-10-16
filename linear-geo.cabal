@@ -48,7 +48,7 @@ library
     import:           common
     exposed-modules:  Linear.Geo
                       Linear.Geo.ECEF
-                      -- Linear.Geo.ECI.TEME
+                      Linear.Geo.ECI.TEME
                       Linear.Geo.ENU
                       Linear.Geo.Geodetic
                       Linear.Geo.PlaneAngle
