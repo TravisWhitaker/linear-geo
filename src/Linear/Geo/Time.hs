@@ -11,7 +11,10 @@ coordinate systems.
 
 -}
 
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DeriveGeneric
+           , DerivingStrategies
+           , ScopedTypeVariables
+           #-}
 
 module Linear.Geo.Time (
     utcToUT1
@@ -33,11 +36,11 @@ module Linear.Geo.Time (
 
 import Data.Fixed
 
-import Data.Maybe
-
 import Data.Time.Calendar
 import Data.Time.Clock
 import Data.Time.Clock.TAI
+
+import GHC.Generics
 
 import Linear.Geo.PlaneAngle
 
@@ -66,6 +69,14 @@ modJulDateEpoch = 2400000.5
 -- | Fractional Julian days since noon UT1 on Monday, January 1, 4713 BC
 --   (November 24, 4717 BC Gregorian).
 newtype JulianDate = JulianDate { getJulianDate :: Rational }
+                   deriving stock ( Generic
+                                  , Eq
+                                  , Ord
+                                  )
+
+-- | Show via `UniversalTime`
+instance Show JulianDate where
+    showsPrec p jd = showsPrec p (universalTimeFromJulianDate jd)
 
 julianDateFromUniversalTime :: UniversalTime -> JulianDate
 julianDateFromUniversalTime (ModJulianDate mjd) = JulianDate (mjd + modJulDateEpoch)
