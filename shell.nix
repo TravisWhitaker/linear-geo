@@ -8,10 +8,9 @@ in with import pinned-nixpkgs {};
 runCommand "linear-geo-env"
 {
     buildInputs =
-        let thisghc = haskell.packages.ghc983.ghcWithPackages
-            (p: []);
+        let thisghc = haskell.packages.ghc9122.ghcWithPackages
+            (p: with p; [cabal-install haskell-language-server]);
         in [ thisghc
              binutils
-             cabal-install
            ];
 } ""
